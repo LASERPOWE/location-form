@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Auto Location Form</title>
+  <style>
+    body { font-family: Arial, padding: 20px; background: #f9f9f9; }
+    input[readonly] { width: 100%; padding: 10px; background: #eee; border: 1px solid #ccc; }
+    button { margin-top: 10px; padding: 10px 20px; }
+  </style>
+</head>
+<body>
+  <h2>Submit Your Current Location</h2>
+  <form id="locationForm">
+    <label>Auto-filled Address:</label><br>
+    <input type="text" id="address" name="address" readonly required /><br>
+    <button type="submit">Submit</button>
+    <p id="status" style="color: green;"></p>
+    <p id="error" style="color: red;"></p>
+  </form>
+
+  <script>
+    const scriptURL = "https://script.google.com/macros/s/AKfycbwWWG9QEwWSqLmbevCEPuow9HI5NtH1jVM4YAgueuJRipKxJ4n_UMJ-dqctyBg4Gx8iYg/exec";
+
+    async function fetchAddress(lat, lon) {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`);
+        const data = await res.json();
+        const fullAddress = data.display_name;
+        document.getElementById("address").value = fullAddress;
+        document.getElementById("status").textContent = "Address fetched successfully.";
+      } catch (e) {
+        document.getElementById("error").textContent = "Failed to fetch address.";
+      }
+    }
+
+    function getLocationAndFill() {
+      if (!navigator.geolocation) {
+        document.getElementById("error").textContent = "Geolocation not supported.";
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          fetchAddress(latitude, longitude);
+        },
+        () => {
+          document.getElementById("error").textContent = "Location permission denied.";
+        }
+      );
+    }
+
+    document.getElementById("locationForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const address = document.getElementById("address").value;
+
+      try {
+        const response = await fetch(scriptURL, {
+          method: "POST",
+          mode: "cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ address }),
+        });
+
+        const result = await response.json();
+        document.getElementById("status").textContent = result.message;
+      } catch (err) {
+        document.getElementById("error").textContent = "Submission failed.";
+      }
+    });
+
+    window.onload = getLocationAndFill;
+  </script>
+</body>
+</html>

@@ -1,76 +1,76 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Auto Location Form</title>
   <style>
-    body { font-family: Arial, padding: 20px; background: #f9f9f9; }
-    input[readonly] { width: 100%; padding: 10px; background: #eee; border: 1px solid #ccc; }
-    button { margin-top: 10px; padding: 10px 20px; }
+    body { font-family: Arial; padding: 20px; }
+    input, button { padding: 10px; margin: 10px 0; width: 100%; }
+    input[readonly] { background-color: #f0f0f0; }
   </style>
 </head>
 <body>
-  <h2>Submit Your Current Location</h2>
+  <h2>📍 Auto Location Address Form</h2>
   <form id="locationForm">
-    <label>Auto-filled Address:</label><br>
-    <input type="text" id="address" name="address" readonly required /><br>
+    <label for="address">Your Address:</label>
+    <input type="text" id="address" name="address" readonly required>
     <button type="submit">Submit</button>
     <p id="status" style="color: green;"></p>
-    <p id="error" style="color: red;"></p>
   </form>
 
   <script>
-    const scriptURL = "https://script.google.com/macros/s/AKfycbwo_9o4UxgcQfFxQtEHPb9351an-SoYQQ3d2CfeWh4v0Qr-BHHXzjtp9ccEGULNC_AfNw/exec";
-
-    async function fetchAddress(lat, lon) {
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`);
-        const data = await res.json();
-        const fullAddress = data.display_name;
-        document.getElementById("address").value = fullAddress;
-        document.getElementById("status").textContent = "Address fetched successfully.";
-      } catch (e) {
-        document.getElementById("error").textContent = "Failed to fetch address.";
-      }
+    // 1. Get address from coordinates
+    function fetchAddress(lat, lon) {
+      fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById('address').value = data.display_name || 'Address not found';
+        })
+        .catch(() => {
+          document.getElementById('address').value = 'Unable to fetch address';
+        });
     }
 
-    function getLocationAndFill() {
-      if (!navigator.geolocation) {
-        document.getElementById("error").textContent = "Geolocation not supported.";
+    // 2. Auto get location on page load
+    window.onload = () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(position => {
+          fetchAddress(position.coords.latitude, position.coords.longitude);
+        }, error => {
+          document.getElementById('address').value = 'Location access denied';
+        });
+      } else {
+        document.getElementById('address').value = 'Geolocation not supported';
+      }
+    };
+
+    // 3. Submit form data
+    document.getElementById('locationForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      const address = document.getElementById('address').value;
+      if (!address || address.includes('denied') || address.includes('not')) {
+        alert("Please allow location access to submit.");
         return;
       }
 
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          fetchAddress(latitude, longitude);
+      fetch('https://script.google.com/macros/s/AKfycbwo_9o4UxgcQfFxQtEHPb9351an-SoYQQ3d2CfeWh4v0Qr-BHHXzjtp9ccEGULNC_AfNw/exec', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
         },
-        () => {
-          document.getElementById("error").textContent = "Location permission denied.";
-        }
-      );
-    }
-
-    document.getElementById("locationForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const address = document.getElementById("address").value;
-
-      try {
-        const response = await fetch(scriptURL, {
-          method: "POST",
-          mode: "cors",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ address }),
-        });
-
-        const result = await response.json();
-        document.getElementById("status").textContent = result.message;
-      } catch (err) {
-        document.getElementById("error").textContent = "Submission failed.";
-      }
+        body: JSON.stringify({ address })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('status').textContent = data.message || 'Success!';
+        document.getElementById('locationForm').reset();
+      })
+      .catch(err => {
+        document.getElementById('status').textContent = 'Submission failed. Check console.';
+        console.error(err);
+      });
     });
-
-    window.onload = getLocationAndFill;
   </script>
 </body>
 </html>

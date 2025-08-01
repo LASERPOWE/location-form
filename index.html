@@ -1,98 +1,45 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Leave Application with Email & Location</title>
-
-  <!-- Google Sign-In -->
-  <meta name="google-signin-client_id" content="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">
+  <title>Auto Location & Email Form</title>
+  <meta name="google-signin-client_id" content="995677134206-i3n2k43cvsr48ngjb6t69s7tsr0sivpj.apps.googleusercontent.com">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-
   <style>
     body {
       font-family: Arial, sans-serif;
       padding: 20px;
     }
-    input, select, textarea {
-      display: block;
-      margin-bottom: 10px;
-      padding: 8px;
-      width: 300px;
-    }
-    input[readonly] {
+    input[readonly], textarea[readonly] {
       background-color: #f0f0f0;
     }
     label {
       font-weight: bold;
     }
-    button {
-      padding: 10px 20px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      cursor: pointer;
+    form {
+      max-width: 400px;
     }
-    button:hover {
-      background-color: #0056b3;
+    button {
+      margin-top: 10px;
     }
   </style>
 </head>
-
 <body>
-  <h2>Leave Application Form</h2>
 
-  <form id="leaveForm">
-    <label for="emp_code">Employee Code</label>
-    <input type="text" id="emp_code" name="emp_code" required />
+  <h2>Auto Location & Email Form</h2>
 
-    <label for="emp_name">Employee Name</label>
-    <input type="text" id="emp_name" name="emp_name" readonly />
+  <form id="locationForm">
+    <label>Your Email:</label><br>
+    <input type="email" id="userMail" name="user_mail" readonly required><br><br>
 
-    <label for="hod">HOD</label>
-    <input type="text" id="hod" name="hod" readonly />
-
-    <label for="desig_name">Designation</label>
-    <input type="text" id="desig_name" name="desig_name" readonly />
-
-    <label for="dept_name">Department</label>
-    <input type="text" id="dept_name" name="dept_name" readonly />
-
-    <label for="leave_type">Leave Type</label>
-    <select id="leave_type" name="leave_type" required>
-      <option value="">Select</option>
-      <option value="CL">CL</option>
-      <option value="SL">SL</option>
-      <option value="COFF">COFF</option>
-    </select>
-
-    <label for="from_date">From Date</label>
-    <input type="date" id="from_date" name="from_date" required />
-
-    <label for="to_date">To Date</label>
-    <input type="date" id="to_date" name="to_date" required />
-
-    <label for="reason">Reason</label>
-    <textarea id="reason" name="reason" required rows="3"></textarea>
-
-    <label for="leave_count">Taken Leave Count</label>
-    <input type="number" id="leave_count" name="leave_count" readonly />
-
-    <label for="hod_mail">HOD Mail ID</label>
-    <input type="email" id="hod_mail" name="hod_mail" readonly />
-
-    <label for="user_mail">User Mail</label>
-    <input type="email" id="user_mail" name="user_mail" readonly required />
-
-    <label for="location">Current Address (Auto)</label>
-    <textarea id="location" name="location" rows="3" readonly></textarea>
+    <label>Your Current Address:</label><br>
+    <textarea id="address" name="address" rows="3" readonly required></textarea><br><br>
 
     <button type="submit">Submit</button>
   </form>
 
-  <!-- Google Sign-In Onload -->
+  <!-- Google Sign-In -->
   <div id="g_id_onload"
-       data-client_id="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"
+       data-client_id="995677134206-i3n2k43cvsr48ngjb6t69s7tsr0sivpj.apps.googleusercontent.com"
        data-context="signin"
        data-ux_mode="popup"
        data-callback="handleCredentialResponse"
@@ -100,90 +47,64 @@
   </div>
 
   <script>
-    // Handle Google Sign-In
+    // Google Sign-In callback
     function handleCredentialResponse(response) {
       const data = parseJwt(response.credential);
-      document.getElementById("user_mail").value = data.email || "";
+      document.getElementById('userMail').value = data.email || '';
     }
 
+    // Decode JWT token
     function parseJwt(token) {
       try {
         const base64Url = token.split('.')[1];
         const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(
-          atob(base64).split('').map(c =>
-            '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
-          ).join('')
-        );
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c =>
+          '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+        ).join(''));
         return JSON.parse(jsonPayload);
       } catch (e) {
         return {};
       }
     }
 
-    // Autofill Address from Geolocation
+    // Get location and reverse geocode
     window.onload = function () {
       if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(async (position) => {
+        navigator.geolocation.getCurrentPosition(async function (position) {
           const lat = position.coords.latitude;
           const lon = position.coords.longitude;
           try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
-            const data = await res.json();
-            document.getElementById("location").value = data.display_name || `${lat}, ${lon}`;
-          } catch {
-            document.getElementById("location").value = `${lat}, ${lon}`;
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+            const data = await response.json();
+            document.getElementById('address').value = data.display_name || `${lat}, ${lon}`;
+          } catch (e) {
+            document.getElementById('address').value = `${lat}, ${lon}`;
           }
-        }, () => {
+        }, function () {
           alert("Location permission denied.");
         });
+      } else {
+        alert("Geolocation not supported.");
       }
     };
 
-    // Calculate Leave Count
-    document.getElementById("from_date").addEventListener("change", updateLeaveCount);
-    document.getElementById("to_date").addEventListener("change", updateLeaveCount);
-
-    function updateLeaveCount() {
-      const from = new Date(document.getElementById("from_date").value);
-      const to = new Date(document.getElementById("to_date").value);
-      if (!isNaN(from) && !isNaN(to) && to >= from) {
-        const days = Math.floor((to - from) / (1000 * 60 * 60 * 24)) + 1;
-        document.getElementById("leave_count").value = days;
-      } else {
-        document.getElementById("leave_count").value = "";
-      }
-    }
-
-    // Submit the Form
-    document.getElementById("leaveForm").addEventListener("submit", function (e) {
+    // Submit form
+    document.getElementById('locationForm').addEventListener('submit', function (e) {
       e.preventDefault();
-      const data = {
-        emp_code: document.getElementById("emp_code").value,
-        emp_name: document.getElementById("emp_name").value,
-        hod: document.getElementById("hod").value,
-        desig_name: document.getElementById("desig_name").value,
-        dept_name: document.getElementById("dept_name").value,
-        leave_type: document.getElementById("leave_type").value,
-        from_date: document.getElementById("from_date").value,
-        to_date: document.getElementById("to_date").value,
-        reason: document.getElementById("reason").value,
-        leave_count: parseInt(document.getElementById("leave_count").value),
-        hod_mail: document.getElementById("hod_mail").value,
-        user_mail: document.getElementById("user_mail").value,
-        location: document.getElementById("location").value
+      const formData = {
+        user_mail: document.getElementById('userMail').value,
+        address: document.getElementById('address').value
       };
-
       fetch("https://script.google.com/macros/s/AKfycbwo_9o4UxgcQfFxQtEHPb9351an-SoYQQ3d2CfeWh4v0Qr-BHHXzjtp9ccEGULNC_AfNw/exec", {
         method: "POST",
         mode: "no-cors",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(formData)
       }).then(() => {
         alert("Submitted successfully!");
-        document.getElementById("leaveForm").reset();
+        document.getElementById('locationForm').reset();
       }).catch(() => {
         alert("Submission failed.");
       });

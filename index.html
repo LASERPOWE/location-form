@@ -2,73 +2,79 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Auto Location Form</title>
+  <title>Auto Address Form</title>
   <style>
-    body { font-family: Arial; padding: 20px; }
-    input, button { padding: 10px; margin: 10px 0; width: 100%; }
-    input[readonly] { background-color: #f0f0f0; }
+    body {
+      font-family: Arial;
+      padding: 20px;
+    }
+    input, button {
+      padding: 10px;
+      width: 100%;
+      margin-top: 10px;
+    }
+    #status {
+      color: green;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
-  <h2>📍 Auto Location Address Form</h2>
+  <h2>📍 Auto Address from Location</h2>
   <form id="locationForm">
-    <label for="address">Your Address:</label>
+    <label for="address">Current Address:</label>
     <input type="text" id="address" name="address" readonly required>
     <button type="submit">Submit</button>
-    <p id="status" style="color: green;"></p>
+    <p id="status"></p>
   </form>
 
   <script>
-    // 1. Get address from coordinates
-    function fetchAddress(lat, lon) {
-      fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
-        .then(res => res.json())
-        .then(data => {
-          document.getElementById('address').value = data.display_name || 'Address not found';
-        })
-        .catch(() => {
-          document.getElementById('address').value = 'Unable to fetch address';
-        });
-    }
+    // 1. Get Location on Load
+    window.onload = function () {
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          function (position) {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
 
-    // 2. Auto get location on page load
-    window.onload = () => {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(position => {
-          fetchAddress(position.coords.latitude, position.coords.longitude);
-        }, error => {
-          document.getElementById('address').value = 'Location access denied';
-        });
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+              .then(res => res.json())
+              .then(data => {
+                document.getElementById("address").value = data.display_name;
+              })
+              .catch(() => {
+                document.getElementById("address").value = "Could not fetch address.";
+              });
+          },
+          function (error) {
+            document.getElementById("address").value = "Location permission denied.";
+          }
+        );
       } else {
-        document.getElementById('address').value = 'Geolocation not supported';
+        document.getElementById("address").value = "Geolocation not supported.";
       }
     };
 
-    // 3. Submit form data
-    document.getElementById('locationForm').addEventListener('submit', function (e) {
+    // 2. Submit Form
+    document.getElementById("locationForm").addEventListener("submit", function (e) {
       e.preventDefault();
 
-      const address = document.getElementById('address').value;
-      if (!address || address.includes('denied') || address.includes('not')) {
-        alert("Please allow location access to submit.");
-        return;
-      }
+      const address = document.getElementById("address").value;
 
-      fetch('https://script.google.com/macros/s/AKfycbwo_9o4UxgcQfFxQtEHPb9351an-SoYQQ3d2CfeWh4v0Qr-BHHXzjtp9ccEGULNC_AfNw/exec', {
-        method: 'POST',
+      fetch("https://script.google.com/macros/s/AKfycbwo_9o4UxgcQfFxQtEHPb9351an-SoYQQ3d2CfeWh4v0Qr-BHHXzjtp9ccEGULNC_AfNw/exec", {
+        method: "POST",
+        mode: "no-cors", // 👈 Add this line!
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({ address })
       })
-      .then(res => res.json())
-      .then(data => {
-        document.getElementById('status').textContent = data.message || 'Success!';
-        document.getElementById('locationForm').reset();
+      .then(() => {
+        document.getElementById("status").textContent = "✅ Submitted successfully!";
       })
-      .catch(err => {
-        document.getElementById('status').textContent = 'Submission failed. Check console.';
-        console.error(err);
+      .catch((err) => {
+        document.getElementById("status").textContent = "❌ Submission failed.";
+        console.error("Submission error:", err);
       });
     });
   </script>
